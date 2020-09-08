@@ -114,10 +114,7 @@ export class WeatherService {
     if (src) id = src.id;
     else return 'No entry';
 
-    let query = this.weatherRepository.createQueryBuilder();
-
-    if (page)
-      query = query.andWhere('Weather.source = :source', { source: id });
+    let query = this.weatherRepository.createQueryBuilder().where('Weather.source = :source', { source: id });;
     if (start && end) {
       query = query
         .andWhere('Weather.date >= :start', { start: start })
@@ -146,9 +143,7 @@ export class WeatherService {
     let id;
     if (loc) id = loc.id;
     else return 'Incorrect city';
-    let query = this.weatherRepository.createQueryBuilder();
-    if (page)
-      query = query.andWhere('Weather.city = :location', { location: id });
+    let query = this.weatherRepository.createQueryBuilder().where('Weather.city = :location', { location: id });
     if (start && end) {
       query = query
         .andWhere('Weather.date >= :start', { start: start })

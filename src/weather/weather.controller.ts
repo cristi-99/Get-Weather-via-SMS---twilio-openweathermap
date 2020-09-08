@@ -1,6 +1,7 @@
 import { Controller, Get, Req, Query } from '@nestjs/common';
 import { WeatherService } from './weather.service';
 import { query } from 'express';
+import { QueryDto } from './dto/query.dto';
 
 @Controller('weather')
 export class WeatherController {
@@ -12,7 +13,7 @@ export class WeatherController {
   }
 
   @Get('source')
-  getSourceQuery(@Query() query) {
+  getSourceQuery(@Query() query:QueryDto) {
       
     return this.weatherService.getBySource(
       query.source,
@@ -24,7 +25,7 @@ export class WeatherController {
   }
 
   @Get('location')
-  getLocationQuery(@Query() query){
+  getLocationQuery(@Query() query:QueryDto){
       return this.weatherService.getByLocation(
           query.city,
           query.howMany,
