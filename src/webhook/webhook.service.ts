@@ -8,27 +8,24 @@ import {
 } from '@nestjs/common';
 import { WeatherService } from 'src/weather/weather.service';
 import { DaysEnum } from 'src/consts/enumDays';
-import { send } from 'process';
-import { request } from 'http';
 import { catchError, map } from 'rxjs/operators';
-import { ConfigModule, ConfigService } from '@nestjs/config';
-import { WebhookConfig } from './webkook.config';
+import { WebhookConfig } from '../config/webhook.config';
+
 @Injectable()
 export class WebhookService {
   constructor(
     private weatherService: WeatherService,
     private httpService: HttpService,
-    private configService: ConfigService,
     private webhookConfig: WebhookConfig,
   ) {}
   verify(query) {
-    let VERIFY_TOKEN = this.configService.get('VERIFY_TOKEN_MESSENGER');
+    let verifyToken = this.webhookConfig.verifyToken;
     let mode = query['hub.mode'];
     let token = query['hub.verify_token'];
     let challenge = query['hub.challenge'];
 
     if (mode && token) {
-      if (mode === 'subscribe' && token === VERIFY_TOKEN) {
+      if (mode === 'subscribe' && token === verifyToken) {
         console.log('Verified');
         return challenge;
       }
@@ -59,8 +56,11 @@ export class WebhookService {
       }
     }
     if (isNaN(days)) days = 1;
-    weather = await this.weatherService.dailyWeather(city[0]);
-
+    weather = await this.weatherService.dailyWeather(city[0], 'Messenger');
+    if (weather == 'Incorrect city') {
+      this.callSendAPI(sender_psid, 'Incorrect city');
+      return 'Incorrect city';
+    }
     let currentDay = new Date().getDay();
     currentDay -= 1;
 
@@ -92,8 +92,9 @@ export class WebhookService {
         text: response,
       },
     };
-    const messengerToken = await this.configService.get('MESSENGER_TOKEN');
+    const messengerToken = this.webhookConfig.messengerToken;
     let headers = { 'Content-Type': 'application/json' };
+
     return this.httpService
       .post(
         this.webhookConfig.webhookUrl + `?access_token=${messengerToken}`,

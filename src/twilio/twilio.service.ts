@@ -4,6 +4,7 @@ import twilio, * as Twilio from 'twilio';
 import { WeatherService } from 'src/weather/weather.service';
 import { DaysEnum } from '../consts/enumDays';
 import { getExpectedTwilioSignature } from 'twilio/lib/webhooks/webhooks';
+import { TwilioConfig } from 'src/config/twilio.config';
 const MessagingResponse = require('twilio').twiml.MessagingResponse;
 
 @Injectable()
@@ -11,11 +12,11 @@ export class TwilioService {
   private accountSid;
   private authToken;
   constructor(
-    private configService: ConfigService,
+    private twilioConfig:TwilioConfig ,
     private weatherService: WeatherService,
   ) {
-    this.accountSid = this.configService.get('TWILIO_ACCOUNT_SID');
-    this.authToken = this.configService.get('TWILIO_AUTH');
+    this.accountSid = this.twilioConfig.accountSid;
+    this.authToken = this.twilioConfig.authToken;
   }
   sendMessage(message) {
     const client = Twilio(this.accountSid, this.authToken);
@@ -23,8 +24,8 @@ export class TwilioService {
       client.messages
         .create({
           body: message,
-          from: this.configService.get('SOURCE_PHONE_NUMBER'),
-          to: this.configService.get('DESTINATION_PHONE_NUMBER'),
+          from: this.twilioConfig.sourcePhoneNumber,
+          to: this.twilioConfig.destinationPhoneNumber
         })
         .then(message => {
           return message.body;
@@ -50,7 +51,7 @@ export class TwilioService {
       }
     }
 
-    weather = await this.weatherService.dailyWeather(city[0]);
+    weather = await this.weatherService.dailyWeather(city[0], 'SMS');
 
     let currentDay = new Date().getDay();
     currentDay -= 1;

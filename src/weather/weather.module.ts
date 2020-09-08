@@ -1,22 +1,25 @@
-import { Module, HttpModule } from "@nestjs/common";
-import { WeatherController } from "./weather.controller";
-import { WeatherService } from "./weather.service";
-import { ConfigModule } from "@nestjs/config";
-import { MongooseModule } from "@nestjs/mongoose";
-import { Location, LocationSchema } from "src/database/schemas/location.schema";
-import { WeatherConfig } from "./weather.config";
-
+import { Module, HttpModule } from '@nestjs/common';
+import { WeatherController } from './weather.controller';
+import { WeatherService } from './weather.service';
+import { TypeOrmModule } from '@nestjs/typeorm';
+import { Location } from './location.entity';
+import { Weather } from './weather.entity';
+import { CustomConfigModule } from 'src/config/config.module';
+import { Source } from './source.entity';
 
 @Module({
-    imports:[ConfigModule, HttpModule.register({
-        timeout: 5000,
-        maxRedirects: 5,
-      }),
-    MongooseModule.forFeature([{name:Location.name, schema: LocationSchema}])],
-    controllers: [WeatherController],
-    providers: [WeatherService, WeatherConfig],
-    exports: [WeatherService]
+  imports: [
+    TypeOrmModule.forFeature([Location]),
+    TypeOrmModule.forFeature([Weather]),
+    TypeOrmModule.forFeature([Source]),
+    CustomConfigModule,
+    HttpModule.register({
+      timeout: 5000,
+      maxRedirects: 5,
+    }),
+  ],
+  controllers: [WeatherController],
+  providers: [WeatherService],
+  exports: [WeatherService],
 })
-
-export class WeatherModule{
-}
+export class WeatherModule {}
