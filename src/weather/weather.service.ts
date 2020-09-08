@@ -68,13 +68,18 @@ export class WeatherService {
       locationInDB = newLocation;
     }
 
-    var date = new Date();
+    let today = new Date();
+    let dd = today.getDate();
+
+    let mm = today.getMonth() + 1;
+    let yyyy = today.getFullYear();
+    let date = yyyy+'-'+mm+'-'+dd
 
     const sourceId = await this.sourceRepository.findOne({ source: source });
-    // const findWeather = await this.weatherRepository.findOne({
-    //   city: locationInDB,
-    //   date: date,
-    //  });
+    const findWeather = await this.weatherRepository.findOne({
+      city: locationInDB,
+      date: date,
+     });
 
     return this.httpService
       .get(
@@ -84,7 +89,7 @@ export class WeatherService {
       )
       .toPromise()
       .then(res => {
-        //if (findWeather) return res.data.daily;
+        if (findWeather) return res.data.daily;
         const newWeather = this.weatherRepository.create({
           temperature: Math.floor(
             parseInt(res.data.daily[0].temp.day) - 275.15,
@@ -136,14 +141,12 @@ export class WeatherService {
     return this.sourceRepository.findOne({ source });
   }
 
-  async getByLocation(city,howMany, page, start, end) {
-    let loc = await this.locationRepostitory.findOne({city})
+  async getByLocation(city, howMany, page, start, end) {
+    let loc = await this.locationRepostitory.findOne({ city });
     let id;
-    if(loc)
-      id = loc.id;
-    else
-      return "Incorrect city";
-    let query = this.weatherRepository.createQueryBuilder()
+    if (loc) id = loc.id;
+    else return 'Incorrect city';
+    let query = this.weatherRepository.createQueryBuilder();
     if (page)
       query = query.andWhere('Weather.city = :location', { location: id });
     if (start && end) {
