@@ -12,7 +12,7 @@ export class WeatherController {
     return this.weatherService.dailyWeather('Suceava', 'SMS');
   }
 
-  @Get('source')
+  @Get('bySource')
   getSourceQuery(@Query() query:QueryDto) {
       
     return this.weatherService.getBySource(
@@ -24,7 +24,7 @@ export class WeatherController {
     );
   }
 
-  @Get('location')
+  @Get('byLocation')
   getLocationQuery(@Query() query:QueryDto){
       return this.weatherService.getByLocation(
           query.city,
@@ -34,4 +34,16 @@ export class WeatherController {
           query.end
       )
   }
+
+  @Get('locations')
+  getAllLocations()
+  {
+    return this.weatherService.getAllLocation();
+  }
+
+  @Get('registrations')
+    getAllRegistrations(){
+      return this.weatherService.getAllRegistrations();
+    }
+  
 }

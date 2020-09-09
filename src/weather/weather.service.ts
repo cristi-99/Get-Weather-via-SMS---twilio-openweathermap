@@ -27,10 +27,9 @@ export class WeatherService {
     private weatherConfig: WeatherConfig,
   ) {}
 
-  async dailyWeather(city: string, source: string) {
+  async getLocation(city) {
+    city = city.toLowerCase();
     let locationKey = this.weatherConfig.locationKey;
-    let weatherKey = this.weatherConfig.weatherKey;
-    let weatherUrl = this.weatherConfig.weatherUrl;
     let locationUrl =
       this.weatherConfig.locationUrl + `?key=${locationKey}&q=${city}`;
     let locationInDB;
@@ -38,10 +37,8 @@ export class WeatherService {
     let notFound = false;
     let lat: string, lng: string;
     if (locationInDB) {
-      lat = locationInDB.latitude;
-      lng = locationInDB.longitude;
+      return locationInDB;
     } else {
-      let laltong;
       await this.httpService
         .get(locationUrl)
         .toPromise()
@@ -65,21 +62,32 @@ export class WeatherService {
         city: city,
       });
       await this.locationRepostitory.save(newLocation);
-      locationInDB = newLocation;
+      return newLocation;
     }
+  }
+
+  async dailyWeather(city: string, source: string) {
+    let weatherKey = this.weatherConfig.weatherKey;
+    let weatherUrl = this.weatherConfig.weatherUrl;
+
+    const locationInDB = await this.getLocation(city);
+
+    if(typeof locationInDB === 'string')
+        return 'Incorrect city';
+    const lat = locationInDB.latitude;
+    const lng = locationInDB.longitude;
 
     let today = new Date();
     let dd = today.getDate();
-
     let mm = today.getMonth() + 1;
     let yyyy = today.getFullYear();
-    let date = yyyy+'-'+mm+'-'+dd
+    let date = yyyy + '-' + mm + '-' + dd;
 
     const sourceId = await this.sourceRepository.findOne({ source: source });
     const findWeather = await this.weatherRepository.findOne({
       city: locationInDB,
       date: date,
-     });
+    });
 
     return this.httpService
       .get(
@@ -95,12 +103,10 @@ export class WeatherService {
             parseInt(res.data.daily[0].temp.day) - 275.15,
           ),
           condition: res.data.daily[0].weather[0].description,
-          // date: date,
           city: locationInDB,
           source: sourceId,
         });
         this.weatherRepository.save(newWeather);
-
         return res.data.daily;
       })
       .catch(err => {
@@ -112,9 +118,13 @@ export class WeatherService {
     let src = await this.getSource(source);
     let id;
     if (src) id = src.id;
-    else return 'No entry';
+    else return 'Source does not exist';
 
-    let query = this.weatherRepository.createQueryBuilder().where('Weather.source = :source', { source: id });;
+    if (!source) return 'Source not provided';
+
+    let query = this.weatherRepository
+      .createQueryBuilder()
+      .where('Weather.source = :source', { source: id });
     if (start && end) {
       query = query
         .andWhere('Weather.date >= :start', { start: start })
@@ -139,11 +149,14 @@ export class WeatherService {
   }
 
   async getByLocation(city, howMany, page, start, end) {
+    city = city.toLowerCase();
     let loc = await this.locationRepostitory.findOne({ city });
     let id;
     if (loc) id = loc.id;
     else return 'Incorrect city';
-    let query = this.weatherRepository.createQueryBuilder().where('Weather.city = :location', { location: id });
+    let query = this.weatherRepository
+      .createQueryBuilder()
+      .where('Weather.city = :location', { location: id });
     if (start && end) {
       query = query
         .andWhere('Weather.date >= :start', { start: start })
@@ -161,5 +174,17 @@ export class WeatherService {
       limit: howMany,
       data: datas,
     };
+  }
+
+  async getAllLocation() {
+    let locations = await this.locationRepostitory.find({});
+    return locations;
+  }
+
+  async getAllRegistrations() {
+    let weather = await this.weatherRepository.find({
+      relations: ['city', 'source'],
+    });
+    return weather;
   }
 }
