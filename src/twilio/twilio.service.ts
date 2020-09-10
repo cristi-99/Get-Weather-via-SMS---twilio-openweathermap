@@ -5,6 +5,7 @@ import { WeatherService } from 'src/weather/weather.service';
 import { DaysEnum } from '../consts/enumDays';
 import { getExpectedTwilioSignature } from 'twilio/lib/webhooks/webhooks';
 import { TwilioConfig } from 'src/config/twilio.config';
+import { Weather } from 'src/weather/weather.entity';
 const MessagingResponse = require('twilio').twiml.MessagingResponse;
 
 @Injectable()
@@ -39,8 +40,8 @@ export class TwilioService {
   }
 
   async receiveMessage(message: string) {
-    let city = message.split(/\s+/);
-    let days, weather;
+    let city:Array<string> = message.split(/\s+/);
+    let days:number
 
     if (city.length === 2) days = 1;
     else {
@@ -51,9 +52,9 @@ export class TwilioService {
       }
     }
 
-    weather = await this.weatherService.dailyWeather(city[0], 'SMS');
+    const weather:Weather = await this.weatherService.dailyWeather(city[0], 'SMS');
 
-    let currentDay = new Date().getDay();
+    let currentDay:number = new Date().getDay();
     currentDay -= 1;
 
     let temperature: string = '';
@@ -74,6 +75,6 @@ export class TwilioService {
     }
 
     this.sendMessage(temperature);
-    return 'responded';
+    return HttpStatus.OK
   }
 }

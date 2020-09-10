@@ -13,37 +13,22 @@ export class WeatherController {
   }
 
   @Get('bySource')
-  getSourceQuery(@Query() query:QueryDto) {
-      
-    return this.weatherService.getBySource(
-      query.source,
-      query.howMany,
-      query.page,
-      query.start,
-      query.end
-    );
+  getSourceQuery(@Query() query: QueryDto) {
+    return this.weatherService.getBySource(query);
   }
 
   @Get('byLocation')
-  getLocationQuery(@Query() query:QueryDto){
-      return this.weatherService.getByLocation(
-          query.city,
-          query.howMany,
-          query.page,
-          query.start,
-          query.end
-      )
+  getLocationQuery(@Query() query: QueryDto) {
+    return this.weatherService.getByLocation(query);
   }
 
   @Get('locations')
-  getAllLocations()
-  {
+  getAllLocations() {
     return this.weatherService.getAllLocation();
   }
 
   @Get('registrations')
-    getAllRegistrations(){
-      return this.weatherService.getAllRegistrations();
-    }
-  
+  getAllRegistrations() {
+    return this.weatherService.getAllRegistrations();
+  }
 }

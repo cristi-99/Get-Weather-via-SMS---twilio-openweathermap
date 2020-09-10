@@ -1,20 +1,17 @@
-import { Injectable, HttpService } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
-import { InjectModel } from '@nestjs/mongoose';
+import {
+  Injectable,
+  HttpService,
+  HttpException,
+  HttpStatus,
+} from '@nestjs/common';
 import { Location } from './location.entity';
-import { Model } from 'mongoose';
 import { WeatherConfig } from '../config/weather.config';
 import { InjectRepository } from '@nestjs/typeorm';
-import {
-  In,
-  Repository,
-  createQueryBuilder,
-  getRepository,
-  Between,
-} from 'typeorm';
+import { Repository } from 'typeorm';
 import { Weather } from './weather.entity';
 import { Source } from './source.entity';
-import { hostname } from 'os';
+import { QueryDto } from './dto/query.dto';
+import { WeatherDto } from './dto/weather.dto';
 
 @Injectable()
 export class WeatherService {
@@ -27,14 +24,15 @@ export class WeatherService {
     private weatherConfig: WeatherConfig,
   ) {}
 
-  async getLocation(city) {
+  async getLocation(city: string) : Promise<Location> {
     city = city.toLowerCase();
-    let locationKey = this.weatherConfig.locationKey;
-    let locationUrl =
+    let locationKey: string = this.weatherConfig.locationKey;
+    let locationUrl: string =
       this.weatherConfig.locationUrl + `?key=${locationKey}&q=${city}`;
-    let locationInDB;
-    locationInDB = await this.locationRepostitory.findOne({ city });
-    let notFound = false;
+    let locationInDB: Location = await this.locationRepostitory.findOne({
+      city,
+    });
+    let notFound: boolean = false;
     let lat: string, lng: string;
     if (locationInDB) {
       return locationInDB;
@@ -53,10 +51,11 @@ export class WeatherService {
         .catch(err => {
           return 'Incorrect city';
         });
-      if (notFound) return 'Incorrect city';
+      if (notFound)
+        throw new HttpException('Incorrect city', HttpStatus.BAD_REQUEST);
       lat = locationInDB['results'][0].bounds.northeast.lat;
       lng = locationInDB['results'][0].bounds.northeast.lng;
-      const newLocation = this.locationRepostitory.create({
+      const newLocation: Location = this.locationRepostitory.create({
         latitude: lat,
         longitude: lng,
         city: city,
@@ -70,21 +69,21 @@ export class WeatherService {
     let weatherKey = this.weatherConfig.weatherKey;
     let weatherUrl = this.weatherConfig.weatherUrl;
 
-    const locationInDB = await this.getLocation(city);
+    const locationInDB: Location = await this.getLocation(city);
 
-    if(typeof locationInDB === 'string')
-        return 'Incorrect city';
-    const lat = locationInDB.latitude;
-    const lng = locationInDB.longitude;
+    const lat: string = locationInDB.latitude;
+    const lng: string = locationInDB.longitude;
 
-    let today = new Date();
-    let dd = today.getDate();
-    let mm = today.getMonth() + 1;
-    let yyyy = today.getFullYear();
-    let date = yyyy + '-' + mm + '-' + dd;
+    let today: Date = new Date();
+    let dd: number = today.getDate();
+    let mm: number = today.getMonth() + 1;
+    let yyyy: number = today.getFullYear();
+    let date: string = yyyy + '-' + mm + '-' + dd;
 
-    const sourceId = await this.sourceRepository.findOne({ source: source });
-    const findWeather = await this.weatherRepository.findOne({
+    const sourceId: Source = await this.sourceRepository.findOne({
+      source: source,
+    });
+    const findWeather: Weather = await this.weatherRepository.findOne({
       city: locationInDB,
       date: date,
     });
@@ -98,7 +97,7 @@ export class WeatherService {
       .toPromise()
       .then(res => {
         if (findWeather) return res.data.daily;
-        const newWeather = this.weatherRepository.create({
+        const newWeather: Weather = this.weatherRepository.create({
           temperature: Math.floor(
             parseInt(res.data.daily[0].temp.day) - 275.15,
           ),
@@ -114,26 +113,31 @@ export class WeatherService {
       });
   }
 
-  async getBySource(source, howMany, page, start, end) {
-    let src = await this.getSource(source);
+  async getBySource(params: QueryDto): Promise<WeatherDto> {
+    if (!params.source)
+      throw new HttpException('Provide source', HttpStatus.BAD_REQUEST);
+
+    let src = await this.getSource(params.source);
     let id;
     if (src) id = src.id;
-    else return 'Source does not exist';
+    else throw new HttpException('Incorrect source', HttpStatus.BAD_REQUEST);
 
-    if (!source) return 'Source not provided';
+    const page = parseInt(params.page);
+    const howMany = parseInt(params.howMany);
 
     let query = this.weatherRepository
       .createQueryBuilder()
       .where('Weather.source = :source', { source: id });
-    if (start && end) {
+    if (params.start && params.end) {
       query = query
-        .andWhere('Weather.date >= :start', { start: start })
-        .andWhere('Weather.date <= :end', { end: end });
+        .andWhere('Weather.date >= :start', { start: params.start })
+        .andWhere('Weather.date <= :end', { end: params.end });
     }
 
     const totalCount = await query.getCount();
 
-    if (page) query = query.limit(howMany).offset((page - 1) * howMany);
+    if (page && howMany)
+      query = query.limit(howMany).offset((page - 1) * howMany);
 
     const datas = await query.getMany();
     return {
@@ -144,26 +148,31 @@ export class WeatherService {
     };
   }
 
-  async getSource(source) {
+  async getSource(source: string): Promise<Source> {
     return this.sourceRepository.findOne({ source });
   }
 
-  async getByLocation(city, howMany, page, start, end) {
-    city = city.toLowerCase();
-    let loc = await this.locationRepostitory.findOne({ city });
-    let id;
+  async getByLocation(params: QueryDto): Promise<WeatherDto> {
+    params.city = params.city.toLowerCase();
+    let loc: Location = await this.locationRepostitory.findOne({
+      city: params.city,
+    });
+    let id: number;
     if (loc) id = loc.id;
-    else return 'Incorrect city';
+    else throw new HttpException('Incorrect city', HttpStatus.BAD_REQUEST);
     let query = this.weatherRepository
       .createQueryBuilder()
       .where('Weather.city = :location', { location: id });
-    if (start && end) {
+    if (params.start && params.end) {
       query = query
-        .andWhere('Weather.date >= :start', { start: start })
-        .andWhere('Weather.date <= :end', { end: end });
+        .andWhere('Weather.date >= :start', { start: params.start })
+        .andWhere('Weather.date <= :end', { end: params.end });
     }
 
-    const totalCount = await query.getCount();
+    const totalCount: number = await query.getCount();
+
+    const page = parseInt(params.page);
+    const howMany = parseInt(params.howMany);
 
     if (page) query = query.limit(howMany).offset((page - 1) * howMany);
 
@@ -176,13 +185,13 @@ export class WeatherService {
     };
   }
 
-  async getAllLocation() {
-    let locations = await this.locationRepostitory.find({});
+  async getAllLocation(): Promise<Location[]> {
+    let locations: Location[] = await this.locationRepostitory.find({});
     return locations;
   }
 
-  async getAllRegistrations() {
-    let weather = await this.weatherRepository.find({
+  async getAllRegistrations(): Promise<Weather[]> {
+    let weather: Weather[] = await this.weatherRepository.find({
       relations: ['city', 'source'],
     });
     return weather;
