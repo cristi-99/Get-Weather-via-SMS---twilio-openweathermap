@@ -19,7 +19,6 @@ import { DatabaseModule } from './database/database.module';
     WebhookModule,
     CustomConfigModule,
     DatabaseModule,
-    MongooseModule.forRoot(new ConfigService().get('DATABASE_PATH')),
   ],
   controllers: [AppController],
   providers: [AppService],

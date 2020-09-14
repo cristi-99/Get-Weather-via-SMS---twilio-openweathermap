@@ -8,8 +8,8 @@ export class WeatherController {
   constructor(private weatherService: WeatherService) {}
 
   @Get('daily')
-  getDailyWheater() {
-    return this.weatherService.dailyWeather('Suceava', 'SMS');
+  getDailyWheater(@Query() query) {
+    return this.weatherService.dailyWeather(query.city, 'SMS');
   }
 
   @Get('bySource')
@@ -30,5 +30,15 @@ export class WeatherController {
   @Get('registrations')
   getAllRegistrations() {
     return this.weatherService.getAllRegistrations();
+  }
+
+  @Get('max')
+  getMaxTemperatureLocation(){
+    return this.weatherService.getMaxWeatherLocation('suceava');
+  }
+
+  @Get('temperatures')
+  getMaxTemperature(){
+    return this.weatherService.getMaxTemperature()
   }
 }

@@ -11,6 +11,7 @@ import { DaysEnum } from 'src/consts/enumDays';
 import { catchError, map } from 'rxjs/operators';
 import { WebhookConfig } from '../config/webhook.config';
 import { Weather } from 'src/weather/weather.entity';
+import { WebhookDto } from './webhook.dto';
 
 @Injectable()
 export class WebhookService {
@@ -19,7 +20,7 @@ export class WebhookService {
     private httpService: HttpService,
     private webhookConfig: WebhookConfig,
   ) {}
-  verify(query) {
+  verify(query): string {
     let verifyToken:string = this.webhookConfig.verifyToken;
     let mode:string = query['hub.mode'];
     let token:string = query['hub.verify_token'];
@@ -31,7 +32,7 @@ export class WebhookService {
       }
     } else throw new HttpException(ForbiddenException, HttpStatus.FORBIDDEN);
   }
-  public receiveEvent(body) {
+  public receiveEvent(body:WebhookDto) {
     if (body.object === 'page') {
       body.entry.forEach(entry => {
         let webhook_event = entry.messaging[0];
@@ -82,8 +83,8 @@ export class WebhookService {
     this.callSendAPI(sender_psid, temperature);
   }
 
-  async callSendAPI(sender_psid, response) {
-    let request_body = {
+  async callSendAPI(sender_psid:string, response:string) {
+    let request_body:object = {
       recipient: {
         id: sender_psid,
       },
@@ -91,7 +92,7 @@ export class WebhookService {
         text: response,
       },
     };
-    const messengerToken = this.webhookConfig.messengerToken;
+    const messengerToken:string = this.webhookConfig.messengerToken;
     const headers:object = { 'Content-Type': 'application/json' };
 
     return this.httpService

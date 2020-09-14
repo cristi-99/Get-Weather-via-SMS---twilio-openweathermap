@@ -13,6 +13,7 @@ import { Source } from './source.entity';
 import { QueryDto } from './dto/query.dto';
 import { WeatherDto } from './dto/weather.dto';
 
+
 @Injectable()
 export class WeatherService {
   constructor(
@@ -66,8 +67,8 @@ export class WeatherService {
   }
 
   async dailyWeather(city: string, source: string) {
-    let weatherKey = this.weatherConfig.weatherKey;
-    let weatherUrl = this.weatherConfig.weatherUrl;
+    let weatherKey:string = this.weatherConfig.weatherKey;
+    let weatherUrl:string = this.weatherConfig.weatherUrl;
 
     const locationInDB: Location = await this.getLocation(city);
 
@@ -117,17 +118,18 @@ export class WeatherService {
     if (!params.source)
       throw new HttpException('Provide source', HttpStatus.BAD_REQUEST);
 
-    let src = await this.getSource(params.source);
-    let id;
+    let src:Source = await this.getSource(params.source);
+    let id:number;
     if (src) id = src.id;
     else throw new HttpException('Incorrect source', HttpStatus.BAD_REQUEST);
 
-    const page = parseInt(params.page);
-    const howMany = parseInt(params.howMany);
+    const page:number = parseInt(params.page);
+    const howMany:number = parseInt(params.howMany);
 
     let query = this.weatherRepository
       .createQueryBuilder()
       .where('Weather.source = :source', { source: id });
+      console.log(typeof query)
     if (params.start && params.end) {
       query = query
         .andWhere('Weather.date >= :start', { start: params.start })
@@ -195,5 +197,30 @@ export class WeatherService {
       relations: ['city', 'source'],
     });
     return weather;
+  }
+
+  async getMaxWeatherLocation(city: string): Promise<Weather>{
+    const location: Location = await this.locationRepostitory.findOne({city:city});
+    const weather: Weather = await this.weatherRepository.createQueryBuilder()
+    .select('MAX(Weather.temperature)')
+    .select(['Weather.date', 'Weather.temperature'])
+    .where('Weather.city = :city', {city:location.id})
+    .getOne();
+    return weather;
+
+  }
+
+  async getMaxTemperature() : Promise<Weather[]>{
+    const tempMax:Weather = await this.weatherRepository.createQueryBuilder()
+    .select('MAX(Weather.temperature)', 'temperature')
+    .getRawOne();
+    const weather:Weather[] = await this.weatherRepository.createQueryBuilder()
+    .select('Weather')
+    .innerJoinAndSelect('Weather.city','city')
+    .where('Weather.temperature = :temperature', {temperature: tempMax.temperature})
+    
+    .getMany();
+    return weather;
+
   }
 }
