@@ -8,42 +8,37 @@ export class WeatherController {
   constructor(private weatherService: WeatherService) {}
 
   @Get('daily')
-  getDailyWheater() {
-    return this.weatherService.dailyWeather('Suceava', 'SMS');
+  getDailyWheater(@Query() query) {
+    return this.weatherService.dailyWeather(query.city, 'SMS');
   }
 
   @Get('bySource')
-  getSourceQuery(@Query() query:QueryDto) {
-      
-    return this.weatherService.getBySource(
-      query.source,
-      query.howMany,
-      query.page,
-      query.start,
-      query.end
-    );
+  getSourceQuery(@Query() query: QueryDto) {
+    return this.weatherService.getBySource(query);
   }
 
   @Get('byLocation')
-  getLocationQuery(@Query() query:QueryDto){
-      return this.weatherService.getByLocation(
-          query.city,
-          query.howMany,
-          query.page,
-          query.start,
-          query.end
-      )
+  getLocationQuery(@Query() query: QueryDto) {
+    return this.weatherService.getByLocation(query);
   }
 
   @Get('locations')
-  getAllLocations()
-  {
+  getAllLocations() {
     return this.weatherService.getAllLocation();
   }
 
   @Get('registrations')
-    getAllRegistrations(){
-      return this.weatherService.getAllRegistrations();
-    }
-  
+  getAllRegistrations() {
+    return this.weatherService.getAllRegistrations();
+  }
+
+  @Get('max')
+  getMaxTemperatureLocation(){
+    return this.weatherService.getMaxWeatherLocation('suceava');
+  }
+
+  @Get('temperatures')
+  getMaxTemperature(){
+    return this.weatherService.getMaxTemperature()
+  }
 }

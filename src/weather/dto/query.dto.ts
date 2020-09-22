@@ -27,9 +27,9 @@ export class QueryDto {
 
   @IsOptional()
   @IsString()
-  source: string | undefined;
+  source: string;
 
   @IsOptional()
   @IsString()
-  city: string | undefined;
+  city: string;
 }

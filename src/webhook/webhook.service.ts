@@ -10,6 +10,8 @@ import { WeatherService } from 'src/weather/weather.service';
 import { DaysEnum } from 'src/consts/enumDays';
 import { catchError, map } from 'rxjs/operators';
 import { WebhookConfig } from '../config/webhook.config';
+import { Weather } from 'src/weather/weather.entity';
+import { WebhookDto } from './webhook.dto';
 
 @Injectable()
 export class WebhookService {
@@ -18,34 +20,32 @@ export class WebhookService {
     private httpService: HttpService,
     private webhookConfig: WebhookConfig,
   ) {}
-  verify(query) {
-    let verifyToken = this.webhookConfig.verifyToken;
-    let mode = query['hub.mode'];
-    let token = query['hub.verify_token'];
-    let challenge = query['hub.challenge'];
+  verify(query): string {
+    let verifyToken:string = this.webhookConfig.verifyToken;
+    let mode:string = query['hub.mode'];
+    let token:string = query['hub.verify_token'];
+    let challenge:string = query['hub.challenge'];
 
     if (mode && token) {
       if (mode === 'subscribe' && token === verifyToken) {
-        console.log('Verified');
         return challenge;
       }
     } else throw new HttpException(ForbiddenException, HttpStatus.FORBIDDEN);
   }
-  public receiveEvent(body) {
+  public receiveEvent(body:WebhookDto) {
     if (body.object === 'page') {
       body.entry.forEach(entry => {
         let webhook_event = entry.messaging[0];
         let messageReceived = webhook_event.message.text;
         this.handleMessage(messageReceived, webhook_event.sender.id);
       });
-      return 'Received';
+      return HttpStatus.OK
     } else throw new HttpException(NotFoundException, HttpStatus.NOT_FOUND);
   }
 
-  async handleMessage(message, sender_psid) {
-    let city = message.split(/\s+/);
+  async handleMessage(message:string, sender_psid:string) {
+    let city:Array<string> = message.split(/\s+/);
     let days: number = 0;
-    let weather;
 
     if (city.length === 1) days = 1;
     else {
@@ -56,12 +56,12 @@ export class WebhookService {
       }
     }
     if (isNaN(days)) days = 1;
-    weather = await this.weatherService.dailyWeather(city[0], 'Messenger');
-    if (weather == 'Incorrect city') {
+    let weather:Weather = await this.weatherService.dailyWeather(city[0], 'Messenger');
+    if (!weather) {
       this.callSendAPI(sender_psid, 'Incorrect city');
-      return 'Incorrect city';
+      throw new HttpException( 'Incorrect city', HttpStatus.BAD_REQUEST)
     }
-    let currentDay = new Date().getDay();
+    let currentDay:number = new Date().getDay();
     currentDay -= 1;
 
     let temperature: string = '';
@@ -83,8 +83,8 @@ export class WebhookService {
     this.callSendAPI(sender_psid, temperature);
   }
 
-  async callSendAPI(sender_psid, response) {
-    let request_body = {
+  async callSendAPI(sender_psid:string, response:string) {
+    let request_body:object = {
       recipient: {
         id: sender_psid,
       },
@@ -92,8 +92,8 @@ export class WebhookService {
         text: response,
       },
     };
-    const messengerToken = this.webhookConfig.messengerToken;
-    let headers = { 'Content-Type': 'application/json' };
+    const messengerToken:string = this.webhookConfig.messengerToken;
+    const headers:object = { 'Content-Type': 'application/json' };
 
     return this.httpService
       .post(
